@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TracQuest — P2P Treasure Hunt on Intercom</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #f5c518;
+    --gold2: #ffd700;
+    --dark: #0a0a0f;
+    --panel: #111118;
+    --panel2: #1a1a25;
+    --border: #2a2a3a;
+    --green: #00ff88;
+    --red: #ff3366;
+    --blue: #00cfff;
+    --text: #d0d0e0;
+    --dim: #666680;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Pixel grid bg */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(245,197,24,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,197,24,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Scanline effect */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.15) 2px,
+      rgba(0,0,0,0.15) 4px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    text-align: center;
+    padding: 50px 20px 30px;
+    position: relative;
+  }
+
+  .logo-pixel {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(20px, 5vw, 38px);
+    color: var(--gold);
+    text-shadow:
+      0 0 20px rgba(245,197,24,0.8),
+      0 0 40px rgba(245,197,24,0.4),
+      4px 4px 0 #7a6000;
+    letter-spacing: 2px;
+    animation: flicker 4s infinite;
+    display: block;
+  }
+
+  @keyframes flicker {
+    0%,94%,96%,100% { opacity: 1; }
+    95% { opacity: 0.7; }
+  }
+
+  .tagline {
+    font-size: 14px;
+    color: var(--blue);
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-top: 12px;
+    font-weight: 600;
+  }
+
+  .badge-row {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 14px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--dim);
+    font-weight: 700;
+  }
+
+  .badge.live { border-color: var(--green); color: var(--green); }
+  .badge.trac { border-color: var(--gold); color: var(--gold); }
+
+  /* ─── STATS ROW ─── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin: 30px 0;
+  }
+
+  .stat-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .stat-card:hover { border-color: var(--gold); }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(245,197,24,0.04), transparent);
+  }
+
+  .stat-num {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 22px;
+    color: var(--gold);
+    display: block;
+    text-shadow: 0 0 12px rgba(245,197,24,0.5);
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 8px;
+    display: block;
+    font-weight: 700;
+  }
+
+  /* ─── SECTION TITLE ─── */
+  .section-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin: 40px 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border), transparent);
+  }
+
+  /* ─── QUEST BOARD ─── */
+  .quest-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+
+  .quest-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .quest-card:hover {
+    border-color: var(--gold);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 32px rgba(245,197,24,0.12);
+  }
+
+  .quest-card.active { border-color: var(--green); }
+  .quest-card.expired { border-color: var(--red); opacity: 0.6; }
+
+  .quest-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+
+  .quest-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: #fff;
+    line-height: 1.6;
+    max-width: 200px;
+  }
+
+  .quest-reward {
+    background: rgba(245,197,24,0.12);
+    border: 1px solid rgba(245,197,24,0.4);
+    border-radius: 6px;
+    padding: 6px 10px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .quest-reward .tnk {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--gold);
+    display: block;
+  }
+
+  .quest-reward .tnk-label {
+    font-size: 9px;
+    color: var(--dim);
+    display: block;
+    margin-top: 2px;
+    letter-spacing: 1px;
+  }
+
+  .quest-desc {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+    margin-bottom: 14px;
+  }
+
+  .quest-meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: var(--dim);
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .quest-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .tag {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 10px;
+    color: var(--dim);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .tag.crypto { border-color: #2a4aff; color: #7090ff; }
+  .tag.puzzle { border-color: #9a2aff; color: #c080ff; }
+  .tag.social { border-color: var(--green); color: var(--green); }
+
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 12px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--green));
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  /* ─── QUEST MODAL ─── */
+  .modal-bg {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(6px);
+  }
+
+  .modal-bg.open { display: flex; }
+
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--gold);
+    border-radius: 14px;
+    padding: 30px;
+    max-width: 560px;
+    width: 100%;
+    position: relative;
+    box-shadow: 0 0 60px rgba(245,197,24,0.15);
+    animation: modalIn 0.25s ease;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 14px; right: 16px;
+    background: none;
+    border: none;
+    color: var(--dim);
+    font-size: 20px;
+    cursor: pointer;
+    font-family: 'Press Start 2P', monospace;
+    transition: color 0.15s;
+  }
+  .modal-close:hover { color: var(--red); }
+
+  .modal-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: var(--gold);
+    margin-bottom: 16px;
+    line-height: 1.7;
+    padding-right: 30px;
+  }
+
+  .modal-body p {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text);
+    margin-bottom: 14px;
+  }
+
+  .clue-box {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--blue);
+    border-radius: 6px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--blue);
+    margin-bottom: 18px;
+    font-style: italic;
+    line-height: 1.6;
+  }
+
+  .answer-input {
+    width: 100%;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: #fff;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .answer-input:focus { border-color: var(--gold); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  .btn-gold {
+    background: var(--gold);
+    color: #000;
+    margin-top: 14px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-gold:hover {
+    background: var(--gold2);
+    box-shadow: 0 0 20px rgba(245,197,24,0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+  .feedback-msg {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    display: none;
+  }
+
+  .feedback-msg.win {
+    display: block;
+    background: rgba(0,255,136,0.1);
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    line-height: 1.8;
+  }
+
+  .feedback-msg.fail {
+    display: block;
+    background: rgba(255,51,102,0.1);
+    border: 1px solid var(--red);
+    color: var(--red);
+  }
+
+  /* ─── CREATE QUEST FORM ─── */
+  .form-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 26px;
+    margin-top: 16px;
+  }
+
+  .form-row { margin-bottom: 16px; }
+
+  label {
+    display: block;
+    font-size: 11px;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  input, textarea, select {
+    width: 100%;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 14px;
+    color: #fff;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+  }
+
+  input:focus, textarea:focus, select:focus { border-color: var(--gold); }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* ─── LEADERBOARD ─── */
+  .lb-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .lb-table th {
+    text-align: left;
+    font-size: 10px;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+  }
+
+  .lb-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 14px;
+    font-weight: 600;
+    vertical-align: middle;
+  }
+
+  .lb-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .rank {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: var(--dim);
+    width: 40px;
+  }
+
+  .rank.gold-rank { color: var(--gold); text-shadow: 0 0 8px rgba(245,197,24,0.5); }
+  .rank.silver-rank { color: #c0c0c0; }
+  .rank.bronze-rank { color: #cd7f32; }
+
+  .lb-addr {
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--blue);
+  }
+
+  .lb-tnk {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: var(--gold);
+    text-align: right;
+  }
+
+  /* ─── HOW IT WORKS ─── */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .step {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    position: relative;
+  }
+
+  .step-num {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 24px;
+    color: rgba(245,197,24,0.15);
+    position: absolute;
+    top: 12px;
+    right: 14px;
+  }
+
+  .step h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  .step p {
+    font-size: 13px;
+    color: var(--dim);
+    line-height: 1.6;
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    text-align: center;
+    padding: 40px 20px 20px;
+    border-top: 1px solid var(--border);
+    margin-top: 60px;
+    font-size: 12px;
+    color: var(--dim);
+    letter-spacing: 1px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .trac-addr {
+    font-family: monospace;
+    color: var(--gold);
+    font-size: 11px;
+    margin-top: 8px;
+    word-break: break-all;
+  }
+
+  /* ─── TABS ─── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+
+  .tab {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    color: var(--dim);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.2s;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ─── INTERCOM STATUS ─── */
+  .intercom-bar {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+    font-size: 12px;
+    color: var(--dim);
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .peer-count {
+    margin-left: auto;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--green);
+  }
+
+  /* ─── TOAST ─── */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .toast {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    max-width: 280px;
+    animation: toastIn 0.3s ease;
+    letter-spacing: 0.5px;
+  }
+
+  .toast.win { border-color: var(--green); color: var(--green); }
+  .toast.info { border-color: var(--blue); color: var(--blue); }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .logo-pixel { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal" id="questModal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header>
+    <span class="logo-pixel">🗺 TRACQUEST</span>
+    <div class="tagline">P2P Treasure Hunt · Powered by Intercom</div>
+    <div class="badge-row">
+      <span class="badge live">● LIVE ON MAINNET</span>
+      <span class="badge trac">500 TNK / QUEST</span>
+      <span class="badge">Fork of Intercom</span>
+    </div>
+  </header>
+
+  <!-- INTERCOM STATUS BAR -->
+  <div class="intercom-bar">
+    <div class="dot"></div>
+    <span>Intercom P2P Network · Sidechain Relay Active</span>
+    <span class="peer-count" id="peerCount">12 PEERS</span>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <span class="stat-num" id="activeQuestsNum">7</span>
+      <span class="stat-label">Active Quests</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num" id="totalSolvedNum">24</span>
+      <span class="stat-label">Quests Solved</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num" id="totalTnkNum">12,000</span>
+      <span class="stat-label">TNK Distributed</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num" id="huntersNum">89</span>
+      <span class="stat-label">Hunters Online</span>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('quests', this)">Quest Board</button>
+    <button class="tab" onclick="switchTab('create', this)">Create Quest</button>
+    <button class="tab" onclick="switchTab('leaderboard', this)">Leaderboard</button>
+    <button class="tab" onclick="switchTab('howto', this)">How It Works</button>
+  </div>
+
+  <!-- ── TAB: QUEST BOARD ── -->
+  <div class="tab-content active" id="tab-quests">
+    <div class="quest-grid" id="questGrid"></div>
+  </div>
+
+  <!-- ── TAB: CREATE QUEST ── -->
+  <div class="tab-content" id="tab-create">
+    <div class="form-card">
+      <div class="form-row">
+        <label>Quest Name</label>
+        <input type="text" id="newName" placeholder="e.g. The Satoshi Cipher" />
+      </div>
+      <div class="form-row">
+        <label>Description (public teaser)</label>
+        <textarea id="newDesc" rows="3" placeholder="Write a short description to intrigue hunters..."></textarea>
+      </div>
+      <div class="form-row">
+        <label>Clue / Puzzle</label>
+        <textarea id="newClue" rows="4" placeholder="The clue hunters will see when they enter this quest..."></textarea>
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Answer (hashed on submit)</label>
+          <input type="text" id="newAnswer" placeholder="Secret answer..." />
+        </div>
+        <div class="form-row">
+          <label>TNK Reward</label>
+          <input type="number" id="newReward" value="500" min="10" />
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Category</label>
+          <select id="newCategory">
+            <option value="puzzle">Puzzle</option>
+            <option value="crypto">Crypto / Cipher</option>
+            <option value="social">Social / Scavenger</option>
+            <option value="trivia">Trivia</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Your Trac Address</label>
+          <input type="text" id="newCreator" placeholder="trac1..." />
+        </div>
+      </div>
+      <button class="btn btn-gold" onclick="createQuest()">⚡ PUBLISH QUEST VIA INTERCOM</button>
+    </div>
+  </div>
+
+  <!-- ── TAB: LEADERBOARD ── -->
+  <div class="tab-content" id="tab-leaderboard">
+    <div class="form-card" style="padding:0;overflow:hidden;">
+      <table class="lb-table" id="lbTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Hunter Address</th>
+            <th>Quests Won</th>
+            <th style="text-align:right">TNK Earned</th>
+          </tr>
+        </thead>
+        <tbody id="lbBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── TAB: HOW IT WORKS ── -->
+  <div class="tab-content" id="tab-howto">
+    <div class="steps">
+      <div class="step">
+        <span class="step-num">01</span>
+        <h3>Connect Wallet</h3>
+        <p>Link your Trac address to start playing. Your Trac wallet is your identity on TracQuest.</p>
+      </div>
+      <div class="step">
+        <span class="step-num">02</span>
+        <h3>Browse Quests</h3>
+        <p>Explore the live quest board. Quests range from simple trivia to complex crypto puzzles.</p>
+      </div>
+      <div class="step">
+        <span class="step-num">03</span>
+        <h3>Solve & Submit</h3>
+        <p>Your answer is hashed locally, then broadcast over Intercom P2P sidechannels. First correct hash wins.</p>
+      </div>
+      <div class="step">
+        <span class="step-num">04</span>
+        <h3>Receive TNK</h3>
+        <p>Rewards are released automatically via Intercom's replicated-state layer to your Trac address.</p>
+      </div>
+      <div class="step">
+        <span class="step-num">05</span>
+        <h3>Create Quests</h3>
+        <p>Set a TNK bounty, write a clue, define the secret answer. Other hunters race to solve it.</p>
+      </div>
+      <div class="step">
+        <span class="step-num">06</span>
+        <h3>Compete</h3>
+        <p>Climb the leaderboard. Top hunters unlock exclusive quest creation privileges and bonus multipliers.</p>
+      </div>
+    </div>
+    <div class="form-card" style="margin-top:24px;">
+      <div class="section-title">Technical Stack</div>
+      <p style="font-size:13px;color:var(--dim);line-height:1.8;font-weight:600;">
+        TracQuest is built on a fork of <strong style="color:var(--text)">Intercom</strong> by Trac Systems.
+        Quest answers are SHA-256 hashed client-side before submission. Verification and reward settlement happen via
+        Intercom's <strong style="color:var(--text)">replicated-state consensus</strong> layer, ensuring no single point of failure.
+        P2P coordination between hunters uses Intercom's <strong style="color:var(--text)">fast sidechannel</strong> protocol —
+        broadcasts are near-instant. Quest metadata is stored on-chain via Trac's Ord-based indexer.
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div>TracQuest — A fork of <a href="https://github.com/Trac-Systems/intercom" style="color:var(--gold)">Intercom</a> · Built for the Trac Ecosystem</div>
+  <div class="trac-addr">Trac Address: YOUR_TRAC_ADDRESS_HERE</div>
+  <div style="margin-top:8px;opacity:0.5;font-size:11px;">© 2025 TracQuest · P2P Treasure Hunt on Intercom Network</div>
+</footer>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+
+const QUESTS = [
+  {
+    id: 1, name: "The Genesis Block Riddle", status: "active",
+    desc: "A cryptographic puzzle hidden in plain sight since block zero. Only true cypherpunks have found it.",
+    clue: "I am the seed from which all chains grow. My creator is a ghost. My birthday is a headline. Reverse my timestamp and remove every digit — what remains?",
+    answer: "satoshi", reward: 500, category: "crypto",
+    creator: "trac1qxy...a8f2", solvers: 0, attempts: 47, progress: 0
+  },
+  {
+    id: 2, name: "Trac Network Trivia Sprint", status: "active",
+    desc: "How well do you know the Trac ecosystem? Answer five rapid-fire questions before time runs out.",
+    clue: "What is the name of Trac's peer-to-peer agent communication protocol that this very app is built on?",
+    answer: "intercom", reward: 250, category: "trivia",
+    creator: "trac1qmn...c3d9", solvers: 3, attempts: 112, progress: 60
+  },
+  {
+    id: 3, name: "The Lost Inscription", status: "active",
+    desc: "A Bitcoin inscription holds a secret. Decode the base64 payload and extract the hidden word.",
+    clue: "VHJhY1F1ZXN0 — decode me. Take only the uppercase letters from the result.",
+    answer: "TQ", reward: 750, category: "crypto",
+    creator: "trac1qzz...ff01", solvers: 1, attempts: 203, progress: 25
+  },
+  {
+    id: 4, name: "Scavenger: Find the Moltbook Post", status: "active",
+    desc: "Somewhere on Moltbook, a Trac team member posted the secret codeword. Find it.",
+    clue: "Search Moltbook for a post tagged #TracQuest published this month. The codeword is in the last line.",
+    answer: "questmaster", reward: 1000, category: "social",
+    creator: "trac1qaa...9900", solvers: 0, attempts: 18, progress: 0
+  },
+  {
+    id: 5, name: "Ordinal Whisper", status: "active",
+    desc: "An early Ordinal inscription whispers a message. Decode the ROT-13 payload.",
+    clue: "Gur nafjre vf gur anzr bs Ovgpbva'f juvgrcncre nhgube.",
+    answer: "satoshi nakamoto", reward: 500, category: "puzzle",
+    creator: "trac1qbc...1234", solvers: 5, attempts: 88, progress: 80
+  },
+  {
+    id: 6, name: "P2P Handshake", status: "active",
+    desc: "Prove you understand Intercom's protocol. What message does a node send first when connecting?",
+    clue: "In Intercom's P2P sidechain protocol, when two nodes first connect, the initiating node sends a specific message. What is this initial handshake message type called?",
+    answer: "hello", reward: 300, category: "trivia",
+    creator: "trac1qde...5678", solvers: 2, attempts: 34, progress: 50
+  },
+  {
+    id: 7, name: "Mirror Maze", status: "active",
+    desc: "A classic logic puzzle with a Trac twist. Solve the maze to reveal a 4-letter word.",
+    clue: "I speak without a mouth. I hear without ears. I have no body but I come alive with the wind. What am I?",
+    answer: "echo", reward: 200, category: "puzzle",
+    creator: "trac1qef...abcd", solvers: 8, attempts: 156, progress: 90
+  }
+];
+
+const LEADERBOARD = [
+  { addr: "trac1q9xk...4f2a", quests: 6, tnk: "3,200" },
+  { addr: "trac1qamn...bc19", quests: 5, tnk: "2,750" },
+  { addr: "trac1qzzf...0011", quests: 4, tnk: "1,800" },
+  { addr: "trac1qmmx...ef44", quests: 3, tnk: "1,500" },
+  { addr: "trac1qklo...9900", quests: 2, tnk: "700" },
+  { addr: "trac1qppr...aa11", quests: 1, tnk: "500" },
+];
+
+// ─── QUEST BOARD ─────────────────────────────────────────────────────────────
+
+function renderQuests() {
+  const grid = document.getElementById('questGrid');
+  grid.innerHTML = QUESTS.map(q => `
+    <div class="quest-card ${q.status}" onclick="openQuest(${q.id})">
+      <div class="quest-header">
+        <div class="quest-name">${q.name}</div>
+        <div class="quest-reward">
+          <span class="tnk">${q.reward}</span>
+          <span class="tnk-label">TNK</span>
+        </div>
+      </div>
+      <div class="quest-desc">${q.desc}</div>
+      <div class="quest-meta">
+        <span class="tag ${q.category}">${q.category.toUpperCase()}</span>
+        <span>👥 ${q.attempts} attempts</span>
+        <span>🏆 ${q.solvers} solved</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:${q.progress}%"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── MODAL ───────────────────────────────────────────────────────────────────
+
+function openQuest(id) {
+  const q = QUESTS.find(x => x.id === id);
+  if (!q) return;
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-title">${q.name}</div>
+    <div class="modal-body">
+      <div class="clue-box">🔍 ${q.clue}</div>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:6px;">
+        Prize: <strong style="color:var(--gold)">${q.reward} TNK</strong> · 
+        ${q.attempts} attempts · ${q.solvers} solved
+      </p>
+      <input class="answer-input" id="answerInput" type="text" placeholder="Type your answer here..." onkeydown="if(event.key==='Enter') submitAnswer(${id})"/>
+      <button class="btn btn-gold" onclick="submitAnswer(${id})">⚡ SUBMIT VIA INTERCOM</button>
+      <div class="feedback-msg" id="feedbackMsg"></div>
+    </div>
+  `;
+  document.getElementById('modalBg').classList.add('open');
+  setTimeout(() => document.getElementById('answerInput').focus(), 100);
+}
+
+function closeModal() {
+  document.getElementById('modalBg').classList.remove('open');
+}
+
+document.getElementById('modalBg').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+async function submitAnswer(id) {
+  const q = QUESTS.find(x => x.id === id);
+  const raw = document.getElementById('answerInput').value.trim().toLowerCase();
+  const fb = document.getElementById('feedbackMsg');
+  
+  if (!raw) return;
+
+  fb.className = 'feedback-msg';
+  fb.textContent = '⏳ Broadcasting via Intercom P2P...';
+  fb.style.display = 'block';
+
+  await delay(1200);
+
+  q.attempts++;
+
+  if (raw === q.answer) {
+    q.solvers++;
+    q.progress = Math.min(100, q.progress + 30);
+    fb.className = 'feedback-msg win';
+    fb.innerHTML = `🏆 CORRECT! +${q.reward} TNK sent to your Trac address!<br><span style="font-size:8px;opacity:0.7">Tx confirmed via Intercom replicated-state layer</span>`;
+    showToast(`🏆 Quest solved! +${q.reward} TNK earned!`, 'win');
+    renderQuests();
+  } else {
+    fb.className = 'feedback-msg fail';
+    fb.textContent = `✗ Wrong answer. ${q.attempts} attempts so far. Keep hunting!`;
+    showToast('Wrong answer. Try again!', 'info');
+  }
+}
+
+// ─── CREATE QUEST ─────────────────────────────────────────────────────────────
+
+function createQuest() {
+  const name = document.getElementById('newName').value.trim();
+  const desc = document.getElementById('newDesc').value.trim();
+  const clue = document.getElementById('newClue').value.trim();
+  const answer = document.getElementById('newAnswer').value.trim().toLowerCase();
+  const reward = parseInt(document.getElementById('newReward').value) || 500;
+  const category = document.getElementById('newCategory').value;
+
+  if (!name || !desc || !clue || !answer) {
+    showToast('Please fill in all fields!', 'info');
+    return;
+  }
+
+  const newQ = {
+    id: QUESTS.length + 1,
+    name, desc, clue, answer, reward, category,
+    status: 'active',
+    creator: 'trac1q' + Math.random().toString(36).substr(2, 6) + '...',
+    solvers: 0, attempts: 0, progress: 0
+  };
+
+  QUESTS.unshift(newQ);
+  renderQuests();
+  document.getElementById('activeQuestsNum').textContent = QUESTS.length;
+
+  showToast(`Quest "${name}" published via Intercom!`, 'win');
+  switchTab('quests', document.querySelector('.tab'));
+  
+  // clear form
+  ['newName','newDesc','newClue','newAnswer'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('newReward').value = '500';
+}
+
+// ─── LEADERBOARD ─────────────────────────────────────────────────────────────
+
+function renderLeaderboard() {
+  const ranks = ['🥇', '🥈', '🥉'];
+  const rankClass = ['gold-rank', 'silver-rank', 'bronze-rank'];
+  document.getElementById('lbBody').innerHTML = LEADERBOARD.map((h, i) => `
+    <tr>
+      <td class="rank ${rankClass[i] || ''}">${ranks[i] || `#${i+1}`}</td>
+      <td class="lb-addr">${h.addr}</td>
+      <td style="color:var(--text)">${h.quests}</td>
+      <td class="lb-tnk">${h.tnk} TNK</td>
+    </tr>
+  `).join('');
+}
+
+// ─── TABS ────────────────────────────────────────────────────────────────────
+
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  else document.querySelectorAll('.tab')[0].classList.add('active');
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function showToast(msg, type = 'info') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// ─── LIVE SIMULATION ─────────────────────────────────────────────────────────
+
+function startLiveUpdates() {
+  setInterval(() => {
+    const peers = 8 + Math.floor(Math.random() * 20);
+    document.getElementById('peerCount').textContent = peers + ' PEERS';
+  }, 5000);
+
+  setInterval(() => {
+    const names = ['trac1qyx...', 'trac1qzz...', 'trac1qmm...'];
+    const actions = ['attempted', 'solved', 'joined'];
+    // subtle — just bump hunters counter occasionally
+    const h = parseInt(document.getElementById('huntersNum').textContent);
+    document.getElementById('huntersNum').textContent = h + Math.floor(Math.random() * 3 - 1);
+  }, 8000);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+
+renderQuests();
+renderLeaderboard();
+startLiveUpdates();
+</script>
+</body>
+</html>
