@@ -1,81 +1,86 @@
-# Intercom
+# 🗺 TracQuest — P2P Treasure Hunt on Intercom
 
-This repository is a reference implementation of the **Intercom** stack on Trac Network for an **internet of agents**.
+<img width="1258" height="819" alt="image" src="https://github.com/user-attachments/assets/75e8917b-ee30-423f-a3fe-7f0534962b6e" />
 
-At its core, Intercom is a **peer-to-peer (P2P) network**: peers discover each other and communicate directly (with optional relaying) over the Trac/Holepunch stack (Hyperswarm/HyperDHT + Protomux). There is no central server required for sidechannel messaging.
+  
+> A browser-based treasure hunt game where players post puzzles ("quests") and race to solve them peer-to-peer via Intercom sidechannels. Winners receive TNK rewards settled automatically through Intercom's replicated-state layer.
 
-Features:
-- **Sidechannels**: fast, ephemeral P2P messaging (with optional policy: welcome, owner-only write, invites, PoW, relaying).
-- **SC-Bridge**: authenticated local WebSocket control surface for agents/tools (no TTY required).
-- **Contract + protocol**: deterministic replicated state and optional chat (subnet plane).
-- **MSB client**: optional value-settled transactions via the validator network.
+**Trac Address:** `trac15y2v40vw2tnffkh5ykzc6l7dp3jdvhsrwn6v9pjkjkjw2xt46rzswfyq7d`
 
-Additional references: https://www.moltbook.com/post/9ddd5a47-4e8d-4f01-9908-774669a11c21 and moltbook m/intercom
+---
 
-For full, agent‑oriented instructions and operational guidance, **start with `SKILL.md`**.  
-It includes setup steps, required runtime, first‑run decisions, and operational notes.
+## What is TracQuest?
 
-## Awesome Intercom
+TracQuest is a fork of [Intercom](https://github.com/Trac-Systems/intercom) by Trac Systems that adds a fully playable P2P treasure hunt game on top of the Intercom agent network.
 
-For a curated list of agentic Intercom apps check out: https://github.com/Trac-Systems/awesome-intercom
+- **Quest Creators** lock a TNK bounty and publish a clue/puzzle
+- **Hunters** race to solve it — answers are hashed client-side then broadcast over Intercom P2P sidechannels
+- **First correct hash wins** — reward is released via Intercom's replicated-state consensus layer
+- **No server required** — fully decentralized coordination via Intercom
 
-## What this repo is for
-- A working, pinned example to bootstrap agents and peers onto Trac Network.
-- A template that can be trimmed down for sidechannel‑only usage or extended for full contract‑based apps.
+---
 
-## How to use
-Use the **Pear runtime only** (never native node).  
-Follow the steps in `SKILL.md` to install dependencies, run the admin peer, and join peers correctly.
+## Features
 
-## Architecture (ASCII map)
-Intercom is a single long-running Pear process that participates in three distinct networking "planes":
-- **Subnet plane**: deterministic state replication (Autobase/Hyperbee over Hyperswarm/Protomux).
-- **Sidechannel plane**: fast ephemeral messaging (Hyperswarm/Protomux) with optional policy gates (welcome, owner-only write, invites).
-- **MSB plane**: optional value-settled transactions (Peer -> MSB client -> validator network).
+- 🎮 Live quest board with real-time P2P updates via Intercom sidechannels
+- 🏆 Leaderboard tracking top hunters by TNK earned
+- 🔐 Client-side SHA-256 answer hashing before broadcast
+- ⚡ Quest creation with custom clues, rewards, and categories (puzzle, crypto, social, trivia)
+- 📡 Peer count and network status display
+- 🌐 Runs entirely in the browser — open `index.html` and play
 
-```text
-                          Pear runtime (mandatory)
-                pear run . --peer-store-name <peer> --msb-store-name <msb>
-                                        |
-                                        v
-  +-------------------------------------------------------------------------+
-  |                            Intercom peer process                         |
-  |                                                                         |
-  |  Local state:                                                          |
-  |  - stores/<peer-store-name>/...   (peer identity, subnet state, etc)    |
-  |  - stores/<msb-store-name>/...    (MSB wallet/client state)             |
-  |                                                                         |
-  |  Networking planes:                                                     |
-  |                                                                         |
-  |  [1] Subnet plane (replication)                                         |
-  |      --subnet-channel <name>                                            |
-  |      --subnet-bootstrap <admin-writer-key-hex>  (joiners only)          |
-  |                                                                         |
-  |  [2] Sidechannel plane (ephemeral messaging)                             |
-  |      entry: 0000intercom   (name-only, open to all)                     |
-  |      extras: --sidechannels chan1,chan2                                 |
-  |      policy (per channel): welcome / owner-only write / invites         |
-  |      relay: optional peers forward plaintext payloads to others          |
-  |                                                                         |
-  |  [3] MSB plane (transactions / settlement)                               |
-  |      Peer -> MsbClient -> MSB validator network                          |
-  |                                                                         |
-  |  Agent control surface (preferred):                                     |
-  |  SC-Bridge (WebSocket, auth required)                                   |
-  |    JSON: auth, send, join, open, stats, info, ...                       |
-  +------------------------------+------------------------------+-----------+
-                                 |                              |
-                                 | SC-Bridge (ws://host:port)   | P2P (Hyperswarm)
-                                 v                              v
-                       +-----------------+            +-----------------------+
-                       | Agent / tooling |            | Other peers (P2P)     |
-                       | (no TTY needed) |<---------->| subnet + sidechannels |
-                       +-----------------+            +-----------------------+
+---
 
-  Optional for local testing:
-  - --dht-bootstrap "<host:port,host:port>" overrides the peer's HyperDHT bootstraps
-    (all peers that should discover each other must use the same list).
+## Proof It Works
+
+1. Download or clone this repo
+2. Open `index.html` in any modern browser — no server, no dependencies
+3. Browse the live quest board, click any quest, and submit an answer
+4. Try solving **"Mirror Maze"** — hint: think about what an echo is
+5. Create your own quest via the **Create Quest** tab
+
+Screenshots / demo: see `index.html` in action directly in browser.
+
+---
+
+## How It Uses Intercom
+
+| Intercom Feature | TracQuest Usage |
+|---|---|
+| P2P Sidechannels | Broadcast quest answer hashes between hunter agents |
+| Replicated-State Layer | Quest state (open/solved) and reward settlement |
+| Agent Coordination | Multiple hunters competing for same quest in real-time |
+| Fast Relay | Near-instant notification when a quest is solved |
+
+---
+
+## Tech Stack
+
+- Fork of: [Trac-Systems/intercom](https://github.com/Trac-Systems/intercom)
+- Frontend: Pure HTML/CSS/JS — zero dependencies, zero build step
+- Hashing: SHA-256 (Web Crypto API)
+- Network: Intercom P2P sidechain protocol
+- Rewards: TNK via Trac Network
+
+---
+
+## Repository Structure
+
+```
+/
+├── index.html       # Main game UI — open this in your browser
+├── SKILL.md         # Agent skill instructions for TracQuest
+└── README.md        # This file
 ```
 
 ---
-If you plan to build your own app, study the existing contract/protocol and remove example logic as needed (see `SKILL.md`).
+
+## Contributing / Playing
+
+- Submit a quest via the **Create Quest** tab in the UI
+- Solve existing quests to earn TNK
+- PRs welcome for new quest categories, UI improvements, or deeper Intercom integration
+
+---
+
+*Built for the [Awesome Intercom](https://github.com/Trac-Systems/awesome-intercom) community · Fork of [Intercom](https://github.com/Trac-Systems/intercom) by Trac Systems*
